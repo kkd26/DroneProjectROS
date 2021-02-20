@@ -89,10 +89,10 @@ if __name__ == '__main__':
         rospy.init_node('olympe')
 
         camera_pub = rospy.Publisher('camera', Image, queue_size=2)
-        quat_pub = rospy.Publisher('quat', QuaternionStamped, queue_size=2)
-        location_pub = rospy.Publisher('location', NavSatFix, queue_size=2)
-        speed_pub = rospy.Publisher('speed', Vector3Stamped, queue_size=2)
-        ground_distance_pub = rospy.Publisher('ground_distance', Range, queue_size=2)
+        quat_pub = rospy.Publisher('quat', QuaternionStamped, queue_size=2, latch=True)
+        location_pub = rospy.Publisher('location', NavSatFix, queue_size=2, latch=True)
+        speed_pub = rospy.Publisher('speed', Vector3Stamped, queue_size=2, latch=True)
+        ground_distance_pub = rospy.Publisher('ground_distance', Range, queue_size=2, latch=True)
 
         # TODO: handle takeoff/landing asynchronously
         takeoff_srv = rospy.Service('takeoff', Trigger, handle_takeoff)
