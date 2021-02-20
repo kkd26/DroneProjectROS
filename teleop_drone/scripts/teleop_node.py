@@ -16,12 +16,14 @@ def handle_joystick_msg(data: Joy):
 
     takeoff = data.buttons[0]
     if takeoff == 1 and last_takeoff != 1:
+        # TODO: call takeoff_func asynchronously
         rospy.loginfo('Taking off')
         takeoff_func()
     last_takeoff = takeoff
 
     landing = data.buttons[1]
     if landing == 1 and last_landing != 1:
+        # TODO: call landing_func asynchronously
         rospy.loginfo('Landing')
         landing_func()
     last_landing = landing

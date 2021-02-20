@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 
 import cv2
-from std_msgs.msg import Header, Time
+from std_msgs.msg import Header
 from sensor_msgs.msg import Image, NavSatFix, Range
 from geometry_msgs.msg import QuaternionStamped, Vector3Stamped, Quaternion, Vector3, Twist
 from std_srvs.srv import Trigger, TriggerResponse
 import rospy
 from cv_bridge import CvBridge
 import olympe
-import json
-from olympe.messages.ardrone3.Piloting import TakeOff, Landing, PCMD
+from olympe.messages.ardrone3.Piloting import TakeOff, Landing
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "WARNING"}}})
 
@@ -26,13 +25,13 @@ def handle_pcmd(data: Twist):
     global drone
     if drone is None or not drone._piloting:
         return
-    # rospy.loginfo(data)
-    pitch, roll, gaz = int(data.linear.x), int(data.linear.y), int(data.linear.z)
+    pitch = int(data.linear.x)
+    roll = int(data.linear.y)
+    gaz = int(data.linear.z)
     yaw = int(data.angular.z)
     drone.piloting_pcmd(pitch=pitch, roll=roll, gaz=gaz, yaw=yaw, piloting_time=0.05)
 
 def frame_cb(yuv_frame: olympe.VideoFrame):
-    # global seq
     info = yuv_frame.info()
     if 'metadata' not in info:
         rospy.logwarn('metadata does not exist in info, skipping frame')
@@ -84,8 +83,6 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
         max_range=float('inf'),
         range=ground_distance,
         header=header)
-    # rospy.loginfo('seq = {}'.format(seq))
-    # seq += 1
 
 if __name__ == '__main__':
     try:
@@ -97,13 +94,13 @@ if __name__ == '__main__':
         speed_pub = rospy.Publisher('speed', Vector3Stamped, queue_size=2)
         ground_distance_pub = rospy.Publisher('ground_distance', Range, queue_size=2)
 
+        # TODO: handle takeoff/landing asynchronously
         takeoff_srv = rospy.Service('takeoff', Trigger, handle_takeoff)
         landing_srv = rospy.Service('landing', Trigger, handle_landing)
 
         pcmd_sub = rospy.Subscriber('pcmd', Twist, handle_pcmd)
         
         bridge = CvBridge()
-        # seq = 0
 
         drone = olympe.Drone(DRONE_IP)
         drone.connect()
