@@ -4,47 +4,18 @@
 
 # import the necessary packages
 from cv_bridge.core import CvBridge
-from imutils.video import VideoStream
 from imutils.video import FPS
 from sensor_msgs.msg import Image
-import argparse
 import imutils
-import time
 import cv2
 import rospy
 from cv_bridge import CvBridge
 
 rospy.init_node('target_tracker')
 
-# construct the argument parser and parse the arguments
-ap = argparse.ArgumentParser()
-ap.add_argument("-t", "--tracker", type=str, default="mil",
-    help="OpenCV object tracker type")
-args = vars(ap.parse_args())
+# Trackers = { CSRT, KCF, Boosting, MIL, TLD, MedianFlow, TrackerMOSSE }
+tracker = cv2.TrackerMIL_create()
 
-# extract the OpenCV version info
-(major, minor) = cv2.__version__.split(".")[:2]
-# if we are using OpenCV 3.2 OR BEFORE, we can use a special factory
-# function to create our object tracker
-if int(major) == 3 and int(minor) < 3:
-    tracker = cv2.Tracker_create(args["tracker"].upper())
-# otherwise, for OpenCV 3.3 OR NEWER, we need to explicity call the
-# approrpiate object tracker constructor:
-else:
-    # initialize a dictionary that maps strings to their corresponding
-    # OpenCV object tracker implementations
-    OPENCV_OBJECT_TRACKERS = {
-        # "csrt": cv2.TrackerCSRT_create,
-        # "kcf": cv2.TrackerKCF_create,
-        # "boosting": cv2.TrackerBoosting_create,
-        "mil": cv2.TrackerMIL_create,
-        # "tld": cv2.TrackerTLD_create,
-        # "medianflow": cv2.TrackerMedianFlow_create,
-        # "mosse": cv2.TrackerMOSSE_create
-    }
-    # grab the appropriate object tracker using our dictionary of
-    # OpenCV object tracker objects
-    tracker = OPENCV_OBJECT_TRACKERS[args["tracker"]]()
 # initialize the bounding box coordinates of the object we are going
 # to track
 initBB = None
@@ -58,9 +29,11 @@ while True:
     # grab the current frame, then handle if we are using a
     # VideoStream or VideoCapture object
     frame = bridge.imgmsg_to_cv2(rospy.wait_for_message('camera', Image))
-    # check to see if we have reached the end of the stream
+
     if frame is None:
-        break
+        rospy.logwarn('Frame is null, skipping')
+        continue
+
     # resize the frame (so we can process it faster) and grab the
     # frame dimensions
     frame = imutils.resize(frame, width=500)
@@ -80,7 +53,6 @@ while True:
         # initialize the set of information we'll be displaying on
         # the frame
         info = [
-            ("Tracker", args["tracker"]),
             ("Success", "Yes" if success else "No"),
             ("FPS", "{:.2f}".format(fps.fps())),
         ]
