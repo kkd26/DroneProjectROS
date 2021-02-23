@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(olympe)
+project(olympe_ros)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -191,6 +191,12 @@ catkin_install_python(PROGRAMS
 #   # myfile2
 #   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 # )
+
+## Mark launch files for installation
+install(DIRECTORY
+  launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)
 
 #############
 ## Testing ##

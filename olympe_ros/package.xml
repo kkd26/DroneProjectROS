@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>olympe</name>
+  <name>olympe_ros</name>
   <version>0.0.0</version>
-  <description>The olympe package</description>
+  <description>The olympe_ros package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

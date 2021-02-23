@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import cv2
-from std_msgs.msg import Header
+from std_msgs.msg import Header, Float32
 from sensor_msgs.msg import Image, NavSatFix, Range
 from geometry_msgs.msg import QuaternionStamped, Vector3Stamped, Quaternion, Vector3, Twist
 from std_srvs.srv import Trigger, TriggerResponse
@@ -9,10 +9,10 @@ import rospy
 from cv_bridge import CvBridge
 import olympe
 from olympe.messages.ardrone3.Piloting import TakeOff, Landing
+from olympe.messages.gimbal import set_target
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "WARNING"}}})
 
-DRONE_IP = '10.202.0.1'
 
 def handle_takeoff(req):
     # TODO: error handling
@@ -23,66 +23,89 @@ def handle_landing(req):
 
 def handle_pcmd(data: Twist):
     global drone
-    if drone is None or not drone._piloting:
-        return
-    pitch = int(data.linear.x)
-    roll = int(data.linear.y)
-    gaz = int(data.linear.z)
-    yaw = int(data.angular.z)
-    drone.piloting_pcmd(pitch=pitch, roll=roll, gaz=gaz, yaw=yaw, piloting_time=0.05)
+    try:
+        if not drone._piloting:
+            rospy.logwarn('Drone is not being piloted, ignoring pcmd')
+            return
+        pitch = int(data.linear.x)
+        roll = int(data.linear.y)
+        gaz = int(data.linear.z)
+        yaw = int(data.angular.z)
+        drone.piloting_pcmd(pitch=pitch, roll=roll, gaz=gaz, yaw=yaw, piloting_time=0.05)
+    except NameError:
+        rospy.logwarn('Drone is not initialized yet, ignoring pcmd')
+
+def handle_gimbal(data: Float32):
+    global drone
+    try:
+        drone(set_target(
+            gimbal_id=0,
+            control_mode='position', 
+            pitch_frame_of_reference='absolute', 
+            pitch=data.data,
+            yaw_frame_of_reference='absolute',
+            yaw=0.0,
+            roll_frame_of_reference='absolute',
+            roll=0.0))
+    except Exception as e:
+        rospy.logerr('Error setting gimbal angle: {}'.format(e))
 
 def frame_cb(yuv_frame: olympe.VideoFrame):
-    info = yuv_frame.info()
-    if 'metadata' not in info:
-        rospy.logwarn('metadata does not exist in info, skipping frame')
-        return
-    metadata = info['metadata']
+    try:
+        info = yuv_frame.info()
+        if 'metadata' not in info:
+            rospy.logwarn('metadata does not exist in info, skipping frame')
+            return
+        metadata = info['metadata']
 
-    # rospy.loginfo(json.dumps(info))
-    cv2_cvt_color_flag = {
-        olympe.PDRAW_YUV_FORMAT_I420: cv2.COLOR_YUV2BGR_I420,
-        olympe.PDRAW_YUV_FORMAT_NV12: cv2.COLOR_YUV2BGR_NV12,
-    }[info['yuv']['format']]
+        # rospy.loginfo(json.dumps(info))
+        cv2_cvt_color_flag = {
+            olympe.PDRAW_YUV_FORMAT_I420: cv2.COLOR_YUV2BGR_I420,
+            olympe.PDRAW_YUV_FORMAT_NV12: cv2.COLOR_YUV2BGR_NV12,
+        }[info['yuv']['format']]
 
-    cv2frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
+        cv2frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
 
-    drone_quat = metadata['drone_quat']
-    location = metadata['location']
-    ground_distance = metadata['ground_distance']
-    speed = metadata['speed']
+        drone_quat = metadata['drone_quat']
+        location = metadata['location']
+        ground_distance = metadata['ground_distance']
+        speed = metadata['speed']
 
-    frame = bridge.cv2_to_imgmsg(cv2frame, 'passthrough')
-    header = Header()
-    header.stamp = rospy.Time.now()
+        frame = bridge.cv2_to_imgmsg(cv2frame, 'passthrough')
+        header = Header()
+        header.stamp = rospy.Time.now()
 
-    frame.header = header
-    camera_pub.publish(frame)
-    quat_pub.publish(
-        quaternion=Quaternion(
-            drone_quat['x'], 
-            drone_quat['y'], 
-            drone_quat['z'], 
-            drone_quat['w']),
-        header=header)
-    
-    location_pub.publish(
-        latitude=location['latitude'],
-        longitude=location['longitude'],
-        altitude=location['altitude'],
-        header=header)
-    
-    speed_pub.publish(
-        vector=Vector3(
-            x=speed['east'],
-            y=speed['north'],
-            z=speed['down']),
-        header=header)
-    
-    ground_distance_pub.publish(
-        min_range=0,
-        max_range=float('inf'),
-        range=ground_distance,
-        header=header)
+        frame.header = header
+        camera_pub.publish(frame)
+        quat_pub.publish(
+            quaternion=Quaternion(
+                drone_quat['x'], 
+                drone_quat['y'], 
+                drone_quat['z'], 
+                drone_quat['w']),
+            header=header)
+        
+        location_pub.publish(
+            latitude=location['latitude'],
+            longitude=location['longitude'],
+            altitude=location['altitude'],
+            header=header)
+        
+        speed_pub.publish(
+            vector=Vector3(
+                x=speed['east'],
+                y=speed['north'],
+                z=speed['down']),
+            header=header)
+        
+        ground_distance_pub.publish(
+            min_range=0,
+            max_range=float('inf'),
+            range=ground_distance,
+            header=header)
+    except KeyError as e:
+        rospy.logerr(e)
+        rospy.logerr(info)
 
 if __name__ == '__main__':
     try:
@@ -99,10 +122,13 @@ if __name__ == '__main__':
         landing_srv = rospy.Service('landing', Trigger, handle_landing)
 
         pcmd_sub = rospy.Subscriber('pcmd', Twist, handle_pcmd)
+        gimbal_sub = rospy.Subscriber('gimbal', Float32, handle_gimbal)
         
         bridge = CvBridge()
 
-        drone = olympe.Drone(DRONE_IP)
+        drone_host = rospy.get_param('~drone_host', '10.202.0.1')
+
+        drone = olympe.Drone(drone_host)
         drone.connect()
         drone.set_streaming_callbacks(raw_cb=frame_cb)
         drone.start_video_streaming()
