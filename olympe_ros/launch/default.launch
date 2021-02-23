@@ -1,0 +1,22 @@
+<launch>
+  <env name="ROSCONSOLE_FORMAT" value="[${time}] [${severity}] ${node}: ${message}"/>
+  <group ns="drone">
+    <node name="olympe" pkg="olympe_ros" type="olympe_node.py" />
+    <node name="target_tracker" pkg="target_tracker" type="tracker_node.py" />
+  
+    <node name="teleop_drone" pkg="teleop_drone" type="teleop_node.py">
+      <!-- Using Xbox One Controller with a Bluetooth connection -->
+      <param name="axis_map" type="string" value="0 1 2 3" />
+
+      <!-- Using Xbox One Controller with a USB connection -->
+      <!-- <param name="axis_map" type="string" value="0 1 3 4" /> -->
+      <remap from="joy" to="/joy" />
+    </node>
+  </group>
+
+  <node name="joy" pkg="joy" type="joy_node">
+    <param name="deadzone" type="double" value="0.1" />
+    <param name="autorepeat_rate" type="double" value="20" />
+    <param name="coalesce_interval" type="double" value="0.05" />
+  </node>
+</launch>
