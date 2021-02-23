@@ -8,11 +8,11 @@ last_takeoff = 0
 last_landing = 0
 
 def handle_joystick_msg(data: Joy):
-    global last_takeoff, last_landing
-    gaz = data.axes[1]
-    yaw = data.axes[0]
-    pitch = data.axes[4]
-    roll = data.axes[3]
+    global last_takeoff, last_landing, axis_map
+    yaw = data.axes[axis_map[0]]
+    gaz = data.axes[axis_map[1]]
+    roll = data.axes[axis_map[2]]
+    pitch = data.axes[axis_map[3]]
 
     takeoff = data.buttons[0]
     if takeoff == 1 and last_takeoff != 1:
@@ -36,6 +36,9 @@ def handle_joystick_msg(data: Joy):
 if __name__ == '__main__':
     try:
         rospy.init_node('teleop_drone')
+        axis_map = [int(x) for x in rospy.get_param('~axis_map', '0 1 2 3').split(' ')]
+        assert len(axis_map) == 4
+        rospy.logwarn('Using axis map: {}'.format(axis_map))
         pcmd_pub = rospy.Publisher('pcmd', Twist, queue_size=1)
         joy_sub = rospy.Subscriber('joy', Joy, handle_joystick_msg)
         takeoff_func = rospy.ServiceProxy('takeoff', Trigger)
