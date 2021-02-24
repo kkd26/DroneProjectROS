@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import cv2
-from std_msgs.msg import Header, Float32
+from std_msgs.msg import Header, Float64
 from sensor_msgs.msg import Image, NavSatFix, Range
 from geometry_msgs.msg import QuaternionStamped, Vector3Stamped, Quaternion, Vector3, Twist
 from std_srvs.srv import Trigger, TriggerResponse
@@ -35,12 +35,12 @@ def handle_pcmd(data: Twist):
     except NameError:
         rospy.logwarn('Drone is not initialized yet, ignoring pcmd')
 
-def handle_gimbal(data: Float32):
+def handle_gimbal(data: Float64):
     global drone
     try:
         drone(set_target(
             gimbal_id=0,
-            control_mode='position', 
+            control_mode='velocity', 
             pitch_frame_of_reference='absolute', 
             pitch=data.data,
             yaw_frame_of_reference='absolute',
@@ -122,7 +122,7 @@ if __name__ == '__main__':
         landing_srv = rospy.Service('landing', Trigger, handle_landing)
 
         pcmd_sub = rospy.Subscriber('pcmd', Twist, handle_pcmd)
-        gimbal_sub = rospy.Subscriber('gimbal', Float32, handle_gimbal)
+        gimbal_sub = rospy.Subscriber('gimbal', Float64, handle_gimbal)
         
         bridge = CvBridge()
 
@@ -134,8 +134,7 @@ if __name__ == '__main__':
         drone.start_video_streaming()
         drone.start_piloting()
 
-        while not rospy.is_shutdown():
-            rospy.spin()
+        rospy.spin()
 
     except rospy.ROSInterruptException:
         pass

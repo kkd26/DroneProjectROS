@@ -1,22 +1,77 @@
 <launch>
   <env name="ROSCONSOLE_FORMAT" value="[${time}] [${severity}] ${node}: ${message}"/>
   <group ns="drone">
-    <node name="olympe" pkg="olympe_ros" type="olympe_node.py" />
-    <node name="target_tracker" pkg="target_tracker" type="tracker_node.py" />
-  
-    <node name="teleop_drone" pkg="teleop_drone" type="teleop_node.py">
-      <!-- Using Xbox One Controller with a Bluetooth connection -->
-      <param name="axis_map" type="string" value="0 1 2 3" />
-
-      <!-- Using Xbox One Controller with a USB connection -->
-      <!-- <param name="axis_map" type="string" value="0 1 3 4" /> -->
-      <remap from="joy" to="/joy" />
+    <node name="olympe" pkg="olympe_ros" type="olympe_node.py">
+      <remap from="gimbal" to="/controller_mux/gimbal" />
+      <remap from="pcmd" to="/controller_mux/pcmd" />
     </node>
   </group>
 
-  <node name="joy" pkg="joy" type="joy_node">
-    <param name="deadzone" type="double" value="0.1" />
-    <param name="autorepeat_rate" type="double" value="20" />
-    <param name="coalesce_interval" type="double" value="0.05" />
-  </node>
+  <group ns="controller_mux">
+    <node name="controller_mux" pkg="drone_controller_mux" type="controller_mux_node.py">
+      <remap from="teleop_pcmd" to="/teleop/pcmd" />
+      <remap from="teleop_gimbal" to="/teleop/gimbal" />
+      <remap from="yaw_controller_yaw" to="/yaw_controller/control_effort" />
+      <remap from="gimbal_controller_gimbal" to="/gimbal_controller/control_effort" />
+    </node>
+  </group>
+
+  <group ns="teleop">
+    <node name="teleop_drone" pkg="teleop_drone" type="teleop_node.py">
+      <!-- Using Xbox One Controller with a Bluetooth connection -->
+      <param name="axis_map" type="string" value="0 1 2 3 7" />
+
+      <!-- Using Xbox One Controller with a USB connection -->
+      <!-- <param name="axis_map" type="string" value="0 1 3 4 7" /> -->
+
+      <param name="takeoff_service" type="string" value="/drone/takeoff" />
+      <param name="landing_service" type="string" value="/drone/landing" />
+    </node>
+
+    <node name="joy" pkg="joy" type="joy_node">
+      <param name="deadzone" type="double" value="0.1" />
+      <param name="autorepeat_rate" type="double" value="20" />
+      <param name="coalesce_interval" type="double" value="0.05" />
+    </node>
+  </group>
+
+  <group ns="tracker">
+    <node name="target_tracker" pkg="target_tracker" type="tracker_node.py">
+      <remap from="camera" to="/drone/camera" />
+    </node>
+  </group>
+
+  <group ns="gimbal_controller">
+    <node name="gimbal_pid" pkg="pid" type="controller">
+      <!-- TODO: fine-tune these parameters -->
+      <param name="Kp" value="2" />
+      <param name="Ki" value="0.3" />
+      <param name="Kd" value="0.05" />
+      <param name="upper_limit" value="1.0" />
+      <param name="lower_limit" value="-1.0" />
+      <param name="windup_limit" value="0.2" />
+
+      <remap from="pid_enable" to="/tracker/tracking_status" />
+      <remap from="state" to="/tracker/target_location_y" />
+    </node>
+
+    <node name="gimbal_setpoint" pkg="rostopic" type="rostopic" args="pub setpoint std_msgs/Float64 0.0 -r 1" />
+  </group>
+
+  <group ns="yaw_controller">
+    <node name="yaw_pid" pkg="pid" type="controller">
+      <!-- TODO: fine-tune these parameters -->
+      <param name="Kp" value="-75.0" />
+      <param name="Ki" value="-10" />
+      <param name="Kd" value="-5" />
+      <param name="upper_limit" value="100.0" />
+      <param name="lower_limit" value="-100.0" />
+      <param name="windup_limit" value="20" />
+
+      <remap from="pid_enable" to="/tracker/tracking_status" />
+      <remap from="state" to="/tracker/target_location_x" />
+    </node>
+
+    <node name="yaw_setpoint" pkg="rostopic" type="rostopic" args="pub setpoint std_msgs/Float64 0.0 -r 1" />
+  </group>
 </launch>

@@ -2,6 +2,7 @@
 import rospy
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist, Vector3
+from std_msgs.msg import Float64
 from std_srvs.srv import Trigger
 
 last_takeoff = 0
@@ -13,6 +14,7 @@ def handle_joystick_msg(data: Joy):
     gaz = data.axes[axis_map[1]]
     roll = data.axes[axis_map[2]]
     pitch = data.axes[axis_map[3]]
+    gimbal_pitch = data.axes[axis_map[4]]
 
     takeoff = data.buttons[0]
     if takeoff == 1 and last_takeoff != 1:
@@ -33,16 +35,19 @@ def handle_joystick_msg(data: Joy):
         angular=Vector3(0, 0, -yaw * 100.0)
     ))
 
+    gimbal_pub.publish(data=gimbal_pitch)
+
 if __name__ == '__main__':
     try:
         rospy.init_node('teleop_drone')
-        axis_map = [int(x) for x in rospy.get_param('~axis_map', '0 1 2 3').split(' ')]
-        assert len(axis_map) == 4
-        rospy.logwarn('Using axis map: {}'.format(axis_map))
+        axis_map = [int(x) for x in rospy.get_param('~axis_map', '0 1 2 3 7').split(' ')]
+        assert len(axis_map) == 5
+        rospy.loginfo('Using axis map: {}'.format(axis_map))
         pcmd_pub = rospy.Publisher('pcmd', Twist, queue_size=1)
+        gimbal_pub = rospy.Publisher('gimbal', Float64, queue_size=1)
         joy_sub = rospy.Subscriber('joy', Joy, handle_joystick_msg)
-        takeoff_func = rospy.ServiceProxy('takeoff', Trigger)
-        landing_func = rospy.ServiceProxy('landing', Trigger)
+        takeoff_func = rospy.ServiceProxy(rospy.get_param('~takeoff_service', 'takeoff'), Trigger)
+        landing_func = rospy.ServiceProxy(rospy.get_param('~landing_service', 'landing'), Trigger)
         rospy.spin()
     except rospy.ROSInterruptException:
         pass

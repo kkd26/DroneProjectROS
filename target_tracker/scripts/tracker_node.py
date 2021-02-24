@@ -7,14 +7,29 @@ from cv_bridge.core import CvBridge
 from imutils.video import FPS
 from sensor_msgs.msg import Image
 import imutils
+from std_msgs.msg import Float64, Bool
 import cv2
 import rospy
 from cv_bridge import CvBridge
+import queue
 
 rospy.init_node('target_tracker')
 
+frame_queue = queue.Queue(2)
+
+def handle_frame(data: Image):
+    try:
+        frame_queue.put_nowait(data)
+    except queue.Full:
+        rospy.logwarn_throttle_identical(1, 'Frame queue overrun: the image processing is not fast enough to keep up with the framerate')
+
+camera_sub = rospy.Subscriber('camera', Image, handle_frame)
+target_location_x_pub = rospy.Publisher('target_location_x', Float64, queue_size=2)
+target_location_y_pub = rospy.Publisher('target_location_y', Float64, queue_size=2)
+tracking_status_pub = rospy.Publisher('tracking_status', Bool, queue_size=2)
+
 # Trackers = { CSRT, KCF, Boosting, MIL, TLD, MedianFlow, TrackerMOSSE }
-tracker = cv2.TrackerMIL_create()
+tracker = cv2.TrackerCSRT_create()
 
 # initialize the bounding box coordinates of the object we are going
 # to track
@@ -28,10 +43,12 @@ while True:
     rospy.loginfo('Trying to grab image...')
     # grab the current frame, then handle if we are using a
     # VideoStream or VideoCapture object
-    frame = bridge.imgmsg_to_cv2(rospy.wait_for_message('camera', Image))
 
-    if frame is None:
-        rospy.logwarn('Frame is null, skipping')
+    try:
+        frame = bridge.imgmsg_to_cv2(frame_queue.get(timeout=1))
+    except queue.Empty:
+        if rospy.is_shutdown():
+            break
         continue
 
     # resize the frame (so we can process it faster) and grab the
@@ -47,6 +64,13 @@ while True:
             (x, y, w, h) = [int(v) for v in box]
             cv2.rectangle(frame, (x, y), (x + w, y + h),
                 (0, 255, 0), 2)
+            center_x = (x + w / 2.0) / W * 2.0 - 1.0
+            center_y = (y + h / 2.0) / H * 2.0 - 1.0
+            target_location_x_pub.publish(data=center_x)
+            target_location_y_pub.publish(data=center_y)
+        
+        tracking_status_pub.publish(data=success)
+
         # update the FPS counter
         fps.update()
         fps.stop()
