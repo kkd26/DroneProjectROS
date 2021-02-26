@@ -66,12 +66,14 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
 
         cv2frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
 
+        cv2frame = cv2.resize(cv2frame, (640, 360))
+
         drone_quat = metadata['drone_quat']
         location = metadata['location']
         ground_distance = metadata['ground_distance']
         speed = metadata['speed']
 
-        frame = bridge.cv2_to_imgmsg(cv2frame, 'passthrough')
+        frame = bridge.cv2_to_imgmsg(cv2frame, 'bgr8')
         header = Header()
         header.stamp = rospy.Time.now()
 
