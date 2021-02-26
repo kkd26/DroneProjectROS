@@ -1,14 +1,14 @@
 <launch>
   <env name="ROSCONSOLE_FORMAT" value="[${time}] [${severity}] ${node}: ${message}"/>
   <group ns="drone">
-    <node name="olympe" pkg="olympe_ros" type="olympe_node.py">
+    <node name="alpha_olympe_bridge" pkg="alpha_olympe_bridge" type="bridge_node.py">
       <remap from="gimbal" to="/controller_mux/gimbal" />
       <remap from="pcmd" to="/controller_mux/pcmd" />
     </node>
   </group>
 
   <group ns="controller_mux">
-    <node name="controller_mux" pkg="drone_controller_mux" type="controller_mux_node.py">
+    <node name="alpha_controller_mux" pkg="alpha_controller_mux" type="mux_node.py">
       <remap from="teleop_pcmd" to="/teleop/pcmd" />
       <remap from="teleop_gimbal" to="/teleop/gimbal" />
       <remap from="yaw_controller_yaw" to="/yaw_controller/control_effort" />
@@ -17,7 +17,7 @@
   </group>
 
   <group ns="teleop">
-    <node name="teleop_drone" pkg="teleop_drone" type="teleop_node.py">
+    <node name="alpha_teleop" pkg="alpha_teleop" type="teleop_node.py">
       <!-- Using Xbox One Controller with a Bluetooth connection -->
       <param name="axis_map" type="string" value="0 1 2 3 7" />
 
@@ -36,7 +36,7 @@
   </group>
 
   <group ns="tracker">
-    <node name="target_tracker" pkg="target_tracker" type="tracker_node.py">
+    <node name="alpha_target_tracker" pkg="alpha_target_tracker" type="tracker_node.py">
       <remap from="camera" to="/drone/camera" />
     </node>
   </group>

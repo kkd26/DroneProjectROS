@@ -56,7 +56,7 @@ def handle_gimbal_ctrl_gimbal(data: Float64):
 
 if __name__ == '__main__':
     try:
-        rospy.init_node('controller_mux')
+        rospy.init_node('alpha_controller_mux')
         pcmd_pub = rospy.Publisher('pcmd', Twist, queue_size=1)
         gimbal_pub = rospy.Publisher('gimbal', Float64, queue_size=1)
         ctrl_source_pub = rospy.Publisher('control_source', String, queue_size=1, latch=True)

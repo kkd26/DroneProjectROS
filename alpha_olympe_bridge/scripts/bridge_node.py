@@ -109,7 +109,7 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
 
 if __name__ == '__main__':
     try:
-        rospy.init_node('olympe')
+        rospy.init_node('alpha_olympe_bridge')
 
         camera_pub = rospy.Publisher('camera', Image, queue_size=2)
         quat_pub = rospy.Publisher('quat', QuaternionStamped, queue_size=2, latch=True)

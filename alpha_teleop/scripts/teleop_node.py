@@ -39,7 +39,7 @@ def handle_joystick_msg(data: Joy):
 
 if __name__ == '__main__':
     try:
-        rospy.init_node('teleop_drone')
+        rospy.init_node('alpha_teleop')
         axis_map = [int(x) for x in rospy.get_param('~axis_map', '0 1 2 3 7').split(' ')]
         assert len(axis_map) == 5
         rospy.loginfo('Using axis map: {}'.format(axis_map))

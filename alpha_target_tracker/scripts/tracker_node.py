@@ -13,7 +13,7 @@ import rospy
 from cv_bridge import CvBridge
 import queue
 
-rospy.init_node('target_tracker')
+rospy.init_node('alpha_target_tracker')
 
 frame_queue = queue.Queue(2)
 
