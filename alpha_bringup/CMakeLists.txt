@@ -194,6 +194,12 @@ install(DIRECTORY
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
 
+## Mark SLAM camera parameter description files for installation
+install(DIRECTORY
+  slam/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/slam
+)
+
 #############
 ## Testing ##
 #############
