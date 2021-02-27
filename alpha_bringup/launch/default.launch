@@ -74,4 +74,10 @@
 
     <node name="yaw_setpoint" pkg="rostopic" type="rostopic" args="pub setpoint std_msgs/Float64 0.0 -r 1" />
   </group>
+
+  <group ns="slam">
+    <node name="orb_slam3" pkg="ORB_SLAM3" type="Mono" args="$(find ORB_SLAM3)/../../../Vocabulary/ORBvoc.txt $(find alpha_bringup)/slam/camera.yaml">
+      <remap from="/camera/image_raw" to="/drone/camera" />
+    </node>
+  </group>
 </launch>
