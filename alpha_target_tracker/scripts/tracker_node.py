@@ -55,10 +55,15 @@ while True:
     # frame dimensions
     # frame = imutils.resize(frame, width=500)
     (H, W) = frame.shape[:2]
+    success = False
+    center_x = 0.0
+    center_y = 0.0
+    
     # check to see if we are currently tracking an object
     if initBB is not None:
         # grab the new bounding box coordinates of the object
         (success, box) = tracker.update(frame)
+
         # check to see if the tracking was a success
         if success:
             (x, y, w, h) = [int(v) for v in box]
@@ -66,10 +71,6 @@ while True:
                 (0, 255, 0), 2)
             center_x = (x + w / 2.0) / W * 2.0 - 1.0
             center_y = (y + h / 2.0) / H * 2.0 - 1.0
-            target_location_x_pub.publish(data=center_x)
-            target_location_y_pub.publish(data=center_y)
-        
-        tracking_status_pub.publish(data=success)
 
         # update the FPS counter
         fps.update()
@@ -85,6 +86,12 @@ while True:
             text = "{}: {}".format(k, v)
             cv2.putText(frame, text, (10, H - ((i * 20) + 20)),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+    
+    # workaround for synchorization with controller mux
+    target_location_x_pub.publish(data=center_x)
+    target_location_y_pub.publish(data=center_y)
+    tracking_status_pub.publish(data=success)
+
     # show the output frame
     cv2.imshow("Frame", frame)
     key = cv2.waitKey(1) & 0xFF
