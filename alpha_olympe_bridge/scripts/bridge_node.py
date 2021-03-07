@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import cv2
-from std_msgs.msg import Header, Float64, Empty
-from sensor_msgs.msg import Image, NavSatFix, Range, NavSatStatus
+from std_msgs.msg import Float64, Empty, Int32, String
+from sensor_msgs.msg import Image, NavSatFix, Range, NavSatStatus, CompressedImage
 from geometry_msgs.msg import QuaternionStamped, Vector3Stamped, Quaternion, Vector3, Twist, Pose, Twist, TransformStamped, PoseStamped
 from nav_msgs.msg import Odometry
 from std_srvs.srv import Trigger, TriggerResponse
@@ -18,6 +18,7 @@ import math
 import tf_conversions
 import tf2_ros
 import tf2_geometry_msgs
+import io
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "WARNING"}}})
 
@@ -134,6 +135,9 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
         location = metadata['location']
         ground_distance = metadata['ground_distance']
         speed = metadata['speed']
+        air_speed = metadata['air_speed']
+        battery_percentage = metadata['battery_percentage']
+        state = metadata['state']
 
         stamp = rospy.Time.now()
         stamp_secs = stamp.to_sec()
@@ -146,7 +150,7 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
         }[info['yuv']['format']]
 
         cv2frame = cv2.cvtColor(yuv_frame.as_ndarray(), cv2_cvt_color_flag)
-        cv2frame = cv2.resize(cv2frame, (640, 360))
+        # cv2frame = cv2.resize(cv2frame, (640, 360))
         frame = bridge.cv2_to_imgmsg(cv2frame, 'bgr8')
         frame.header.stamp = stamp
         camera_pub.publish(frame)
@@ -214,12 +218,12 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
         location_msg = NavSatFix()
         location_msg.header.stamp = stamp
         try:
-            location_msg.status = NavSatStatus.STATUS_FIX
+            location_msg.status.status = NavSatStatus.STATUS_FIX
             location_msg.latitude = location['latitude']
             location_msg.longitude = location['longitude']
             location_msg.altitude = location['altitude']
         except KeyError:
-            location_msg.status = NavSatStatus.STATUS_NO_FIX
+            location_msg.status.status = NavSatStatus.STATUS_NO_FIX
         location_pub.publish(location_msg)
 
         # --- GROUND DISTANCE ---
@@ -230,12 +234,38 @@ def frame_cb(yuv_frame: olympe.VideoFrame):
         ground_distance_msg.max_range = float('inf')
         ground_distance_msg.range = ground_distance
         ground_distance_pub.publish(ground_distance_msg)
+
+        # --- AIR SPEED ---
+        air_speed_pub.publish(data=air_speed)
+
+        # --- BATTERY PERCENTAGE ---
+        battery_percentage_pub.publish(data=battery_percentage)
+
+        # --- STATE ---
+        state_pub.publish(data=state)
         
         last_stamp_secs = stamp.to_sec()
         
     except KeyError as e:
         rospy.logerr(e)
         rospy.logerr(info)
+
+def frame_compressed_cb(h264_frame: olympe.VideoFrame):
+    header_io = io.BytesIO()
+    h264_frame._stream['h264_header'].tofile(header_io)
+    header = header_io.getvalue()
+    
+    h264_header_msg = CompressedImage()
+    h264_header_msg.format = 'h264_header'
+    h264_header_msg.header.stamp = rospy.Time.now()
+    h264_header_msg.data = header
+    camera_h264_header_pub.publish(h264_header_msg)
+
+    h264_frame_msg = CompressedImage()
+    h264_frame_msg.format = 'h264'
+    h264_frame_msg.header.stamp = rospy.Time.now()
+    h264_frame_msg.data = h264_frame.as_ndarray().tostring()
+    camera_h264_pub.publish(h264_frame_msg)
 
 if __name__ == '__main__':
     try:
@@ -244,12 +274,18 @@ if __name__ == '__main__':
         param_map_frame_id = rospy.get_param('map_frame_id', 'map')
         param_pilot_frame_id = rospy.get_param('pilot_frame_id', 'pilot_raw')
 
-        camera_pub = rospy.Publisher('camera', Image, queue_size=2)
+        camera_pub = rospy.Publisher('camera/image_raw', Image, queue_size=2)
+        camera_h264_pub = rospy.Publisher('camera/image_h264', CompressedImage, queue_size=2, latch=True)
+        camera_h264_header_pub = rospy.Publisher('camera/image_h264_header', CompressedImage, queue_size=1, latch=True)
+
         location_pub = rospy.Publisher('gps', NavSatFix, queue_size=2, latch=True)
         odom_pub = rospy.Publisher('odom', Odometry, queue_size=2, latch=True)
         pilot_location_pub = rospy.Publisher('pilot/gps', NavSatFix, queue_size=2, latch=True)
         pilot_odom_pub = rospy.Publisher('pilot/odom_raw', Odometry, queue_size=2, latch=True)
         ground_distance_pub = rospy.Publisher('ground_distance', Range, queue_size=2, latch=True)
+        air_speed_pub = rospy.Publisher('air_speed', Float64, queue_size=2, latch=True)
+        battery_percentage_pub = rospy.Publisher('battery_percentage', Int32, queue_size=2, latch=True)
+        state_pub = rospy.Publisher('state', String, queue_size=2, latch=True)
         tf_broadcaster = tf2_ros.TransformBroadcaster()
 
         takeoff_sub = rospy.Subscriber('takeoff', Empty, handle_takeoff)
@@ -265,9 +301,10 @@ if __name__ == '__main__':
 
         with FlightListener(drone):
             drone.connect()
-            drone.set_streaming_callbacks(raw_cb=frame_cb)
+            drone.set_streaming_callbacks(raw_cb=frame_cb, h264_cb=frame_compressed_cb)
             drone.start_video_streaming()
             drone.start_piloting()
+            drone.set_streaming_output_files()
 
             # this is an ugly workaround as we can't directly get the controller location without setting HomeType to pilot and listen to HomeChanged
             drone(HomeType('PILOT')).wait()

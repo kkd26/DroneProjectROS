@@ -12,6 +12,15 @@
         <remap from="sync" to="/drone/odom" />
       </node>
     </group>
+    <group ns="camera">
+      <node name="alpha_video_encoder" pkg="alpha_video_encoder" type="encoder_node.py">
+        <param name="bitrate" type="int" value="2500" />
+        <param name="tsmux_alignment" type="int" value="30" />
+      </node>
+      <node name="alpha_video_ws_publisher" pkg="alpha_video_ws_publisher" type="publisher_node.py">
+
+      </node>
+    </group>
   </group>
 
   <group ns="controller_mux">
@@ -42,7 +51,7 @@
 
   <group ns="tracker">
     <node name="alpha_target_tracker" pkg="alpha_target_tracker" type="tracker_node.py">
-      <remap from="camera" to="/drone/camera" />
+      <remap from="camera" to="/drone/camera/image_raw" />
     </node>
   </group>
 
@@ -133,6 +142,8 @@
       <remap from='enabled' to='/teleop/follower_enabled' />
     </node>
   </group>
+
+  <include file="$(find alpha_webgui)/launch/webgui.launch"/>
 
   <!-- <group ns="slam">
     <node name="orb_slam3" pkg="ORB_SLAM3" type="Mono" args="$(find ORB_SLAM3)/../../../Vocabulary/ORBvoc.txt $(find alpha_bringup)/slam/camera.yaml">
