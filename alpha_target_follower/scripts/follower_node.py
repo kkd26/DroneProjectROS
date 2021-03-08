@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 
-from typing import List
 import rospy
-from std_msgs import msg
 import tf2_ros
+import message_filters
+
 from tf2_msgs.msg import TFMessage
 from std_msgs.msg import Float64, Bool
-from geometry_msgs.msg import TransformStamped, Point, Vector3
-import message_filters
-from enum import Enum
+from geometry_msgs.msg import TransformStamped, Vector3
 
 class TfSubscriber(message_filters.Subscriber):
     def __init__(self, *args, target_frame: str = None, source_frame: str = None, **kwargs):

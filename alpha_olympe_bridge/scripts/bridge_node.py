@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 
 import cv2
-from std_msgs.msg import Float64, Empty, Int32, String
-from sensor_msgs.msg import Image, NavSatFix, Range, NavSatStatus, CompressedImage
-from geometry_msgs.msg import QuaternionStamped, Vector3Stamped, Quaternion, Vector3, Twist, Pose, Twist, TransformStamped, PoseStamped
-from nav_msgs.msg import Odometry
-from std_srvs.srv import Trigger, TriggerResponse
 import rospy
-from cv_bridge import CvBridge
 import olympe
-from olympe.messages.ardrone3.Piloting import TakeOff, Landing
-from olympe.messages.gimbal import set_target
-from olympe.messages.ardrone3.GPSSettingsState import HomeChanged
-from olympe.messages.ardrone3.GPSSettings import HomeType
 import utm
 import math
 import tf_conversions
 import tf2_ros
-import tf2_geometry_msgs
 import io
+
+from std_msgs.msg import Float64, Empty, Int32, String
+from sensor_msgs.msg import Image, NavSatFix, Range, NavSatStatus, CompressedImage
+from geometry_msgs.msg import Vector3Stamped, Twist, Twist, TransformStamped
+from nav_msgs.msg import Odometry
+from cv_bridge import CvBridge
+
+from olympe.messages.ardrone3.Piloting import TakeOff, Landing
+from olympe.messages.gimbal import set_target
+from olympe.messages.ardrone3.GPSSettingsState import HomeChanged
+from olympe.messages.ardrone3.GPSSettings import HomeType
 
 olympe.log.update_config({"loggers": {"olympe": {"level": "WARNING"}}})
 
@@ -313,7 +313,3 @@ if __name__ == '__main__':
 
     except rospy.ROSInterruptException:
         pass
-    finally:
-        drone.stop_piloting()
-        drone.stop_video_streaming()
-        drone.disconnect()

@@ -8,11 +8,8 @@ import rospy
 from sensor_msgs.msg import Image, CompressedImage
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import Gst, GObject, GLib
-import logging
+from gi.repository import Gst, GLib
 import queue
-
-
 
 class GstPipeline():
     def __init__(self, input_caps, bitrate=3000, tsmux_alignment=30):
@@ -27,19 +24,17 @@ class GstPipeline():
         self.tsmux_alignment = tsmux_alignment
     
     def pull_frame(self):
-        return self.frame_queue.get(True, 31536000)
+        return self.frame_queue.get(True)
 
     def _put_frame(self, data):
         sample = self.videosink.emit("pull-sample")
         if sample is not None:
             self.current_buffer = sample.get_buffer()
             current_data = self.current_buffer.extract_dup(0, self.current_buffer.get_size())
-            #logging.info(".")
             try:
-                #   logging.info("Frame put into the queue, current size is {}".format(self.frame_queue.qsize()))
                 self.frame_queue.put_nowait(current_data)
             except queue.Full:
-                logging.warning("Buffer overrun")
+                rospy.logwarn("Gst: Buffer overrun")
         return False
     
     def push_frame(self, buf):
@@ -53,14 +48,13 @@ class GstPipeline():
         elif t == Gst.MessageType.ERROR:
             self.pipeline.set_state(Gst.State.NULL)
             err, debug = message.parse_error()
-            print("Error: %s" % err, debug)
+            rospy.logerr("Gst: Error: {} {}".format(err, debug))
         
     def gst_thread(self):
         Gst.init(None)
 
         cmd = "appsrc name=src do-timestamp=1 is-live=1 ! autovideoconvert ! avenc_mpeg1video name=encoder ! mpegvideoparse ! mpegtsmux name=mpegtsmux ! appsink name=sink"
-        # cmd = "appsrc name=src do-timestamp=1 is-live=1 ! autovideoconvert ! avenc_mpeg1video name=encoder ! mpegvideoparse ! mpegtsmux name=mpegtsmux ! tsdemux ! mpeg2dec ! xvimagesink"
-        logging.info("Starting pipeline {}".format(cmd))
+        rospy.loginfo("Gst: Starting pipeline {}".format(cmd))
         self.pipeline = Gst.parse_launch(cmd)
 
         bus = self.pipeline.get_bus()
@@ -85,17 +79,17 @@ class GstPipeline():
         if self.on_pipeline_ready is not None:
             self.on_pipeline_ready()
         
-        rospy.loginfo('Pipeline is ready')
+        rospy.loginfo('Gst: Pipeline is ready')
         
         self.mainloop = GLib.MainLoop()
         self.mainloop.run()
 
     def set_playing(self):
-        logging.info("Pipeline state is set to PLAYING")
+        rospy.loginfo("Gst: Pipeline state is set to PLAYING")
         self.pipeline.set_state(Gst.State.PLAYING)
     
     def set_paused(self):
-        logging.info("Pipeline state is set to PAUSED")
+        rospy.loginfo("Gst: Pipeline state is set to PAUSED")
         self.pipeline.set_state(Gst.State.PAUSED)
 
 
@@ -113,30 +107,30 @@ def publish_frame(pipeline: GstPipeline, pub: rospy.Publisher):
 
 
 if __name__ == '__main__':
-    rospy.init_node('alpha_video_encoder')
-    bitrate = rospy.get_param('~bitrate', 3000)
-    tsmux_alignment = rospy.get_param('~tsmux_alignment', 30)
-    rospy.loginfo('Waiting for first frame...')
-    first_image = rospy.wait_for_message('image_raw', Image)
-    if first_image.encoding != 'bgr8':
-        raise Exception('Image encoding {} is not supported'.format(first_image.encoding))
+    try:
+        rospy.init_node('alpha_video_encoder')
+        bitrate = rospy.get_param('~bitrate', 3000)
+        tsmux_alignment = rospy.get_param('~tsmux_alignment', 30)
+        rospy.loginfo('Waiting for first frame...')
+        first_image = rospy.wait_for_message('image_raw', Image)
+        if first_image.encoding != 'bgr8':
+            raise Exception('Image encoding {} is not supported'.format(first_image.encoding))
 
-    caps = 'video/x-raw,format=BGR,height={},width={},framerate=30/1'.format(first_image.height, first_image.width)
-    rospy.loginfo('Determined caps: {}'.format(caps))
+        caps = 'video/x-raw,format=BGR,height={},width={},framerate=30/1'.format(first_image.height, first_image.width)
+        rospy.loginfo('Determined caps: {}'.format(caps))
 
-    gst_pipeline = GstPipeline(caps, bitrate, tsmux_alignment)
-    gst_thread = threading.Thread(target=gst_pipeline.gst_thread)
-    gst_thread.daemon = True
+        gst_pipeline = GstPipeline(caps, bitrate, tsmux_alignment)
+        gst_thread = threading.Thread(target=gst_pipeline.gst_thread)
+        gst_thread.daemon = True
 
-    gst_thread.start()
+        gst_thread.start()
 
-    video_sub = rospy.Subscriber('image_raw', Image, handle_frame, gst_pipeline)
-    video_pub = rospy.Publisher('image_mpeg1', CompressedImage, queue_size=30)
+        video_sub = rospy.Subscriber('image_raw', Image, handle_frame, gst_pipeline)
+        video_pub = rospy.Publisher('image_mpeg1', CompressedImage, queue_size=30)
 
-    pub_thread = threading.Thread(target=publish_frame, args=(gst_pipeline, video_pub))
-    pub_thread.daemon = True
-    pub_thread.start()
-    rospy.spin()
-
-    # gst_pipeline.set_playing()
-
+        pub_thread = threading.Thread(target=publish_frame, args=(gst_pipeline, video_pub))
+        pub_thread.daemon = True
+        pub_thread.start()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        pass

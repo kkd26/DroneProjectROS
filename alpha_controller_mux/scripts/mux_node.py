@@ -2,7 +2,7 @@
 
 import rospy
 from std_msgs.msg import Float64, String
-from geometry_msgs.msg import Twist, Vector3
+from geometry_msgs.msg import Twist
 import message_filters
 
 last_ctrl = (0, 0.0) # (priority, time)

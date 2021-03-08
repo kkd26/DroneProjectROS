@@ -3,7 +3,6 @@ import rospy
 from sensor_msgs.msg import Joy
 from geometry_msgs.msg import Twist, Vector3
 from std_msgs.msg import Float64, Bool, Empty
-from std_srvs.srv import Trigger
 
 last_takeoff = 0
 last_landing = 0

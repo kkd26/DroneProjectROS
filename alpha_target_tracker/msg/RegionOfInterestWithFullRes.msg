@@ -1,0 +1,3 @@
+sensor_msgs/RegionOfInterest roi
+uint32 full_height
+uint32 full_width
