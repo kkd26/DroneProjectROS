@@ -22,7 +22,7 @@ def handle_set_roi_request(data: SetRegionOfInterestRequest, request_queue: queu
     resp = SetRegionOfInterestResponse()
     try:
         request_queue.empty()
-        request_queue.put_nowait(data.roi)
+        request_queue.put_nowait(data)
         resp.success = True
     except:
         resp.success = False
@@ -74,10 +74,10 @@ if __name__ == '__main__':
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             
             roi = RegionOfInterestWithFullRes()
-            roi.roi.x_offset = x
-            roi.roi.y_offset = y
-            roi.roi.width = w
-            roi.roi.height = h
+            roi.roi.x_offset = max(0, x)
+            roi.roi.y_offset = max(0, y)
+            roi.roi.width = max(0, w)
+            roi.roi.height = max(0, h)
             roi.full_height = H
             roi.full_width = W
             target_roi_pub.publish(roi)
@@ -102,7 +102,7 @@ if __name__ == '__main__':
                     tracker = None
                 else:
                     tracker = cv2.TrackerCSRT_create()
-                    roi = (roi_msg.x_offset, roi_msg.y_offset, roi_msg.width, roi_msg.height)
+                    roi = (roi_msg.roi.x_offset, roi_msg.roi.y_offset, roi_msg.roi.width, roi_msg.roi.height)
                     tracker.init(frame, roi)
                     rospy.loginfo('Target ROI updated: {}'.format(roi))
             except queue.Empty:

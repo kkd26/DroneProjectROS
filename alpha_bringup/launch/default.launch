@@ -67,7 +67,7 @@
   
         <remap from="pid_enable" to="/tracker/tracking_status" />
       </node>
-      <node name="gimbal_transformer" pkg="topic_tools" type="transform" args="--wait-for-start /tracker/target_roi state std_msgs/Float64 '(m.roi.y_offset + m.roi.height / 2.0) / m.full_height * 2.0 - 1.0'" />
+      <node name="gimbal_transformer" pkg="topic_tools" type="transform" args="--wait-for-start /tracker/target_roi state std_msgs/Float64 '0.0 if m.roi.height == 0 else (m.roi.y_offset + m.roi.height / 2.0) / m.full_height * 2.0 - 1.0'" />
       <node name="gimbal_setpoint" pkg="rostopic" type="rostopic" args="pub setpoint std_msgs/Float64 0.0 -r 1" />
     </group>
 
@@ -84,7 +84,7 @@
   
         <remap from="pid_enable" to="/tracker/tracking_status" />
       </node>
-      <node name="yaw_transformer" pkg="topic_tools" type="transform" args="--wait-for-start /tracker/target_roi state std_msgs/Float64 '(m.roi.x_offset + m.roi.width / 2.0) / m.full_width * 2.0 - 1.0' " />
+      <node name="yaw_transformer" pkg="topic_tools" type="transform" args="--wait-for-start /tracker/target_roi state std_msgs/Float64 '0.0 if m.roi.width == 0 else (m.roi.x_offset + m.roi.width / 2.0) / m.full_width * 2.0 - 1.0' " />
       <node name="yaw_setpoint" pkg="rostopic" type="rostopic" args="pub setpoint std_msgs/Float64 0.0 -r 1" />
     </group>
   </group>
