@@ -52,7 +52,7 @@
   <group ns="tracker">
     <node name="alpha_target_tracker" pkg="alpha_target_tracker" type="tracker_node.py">
       <remap from="image_raw" to="/drone/camera/image_raw" />
-      <param name="is_headless" type="bool" value="false" />
+      <param name="is_headless" type="bool" value="true" />
     </node>
     <group ns="gimbal_controller">
       <node name="gimbal_pid" pkg="pid" type="controller">
