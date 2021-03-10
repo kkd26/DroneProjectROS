@@ -60,6 +60,8 @@ if __name__ == '__main__':
         joy_sub = rospy.Subscriber('joy', Joy, handle_joystick_msg)
         takeoff_pub = rospy.Publisher('takeoff', Empty, queue_size=1)
         landing_pub = rospy.Publisher('landing', Empty, queue_size=1)
+        takeoff_relay_sub = rospy.Subscriber('takeoff_relay', Empty, lambda _: takeoff_pub.publish())
+        landing_relay_sub = rospy.Subscriber('landing_relay', Empty, lambda _: landing_pub.publish())
         follower_enabled_pub = rospy.Publisher('follower_enabled', Bool, queue_size=1, latch=True)
         rospy.spin()
     except rospy.ROSInterruptException:

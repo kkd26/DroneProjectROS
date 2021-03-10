@@ -72,6 +72,8 @@ if __name__ == '__main__':
 
                     if not is_headless: 
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                else:
+                    tracker = None
             
             roi = RegionOfInterestWithFullRes()
             roi.roi.x_offset = max(0, x)

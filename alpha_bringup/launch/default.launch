@@ -50,7 +50,7 @@
   </group>
 
   <group ns="tracker">
-    <node name="alpha_target_tracker" pkg="alpha_target_tracker" type="tracker_node.py">
+    <node name="alpha_target_tracker" pkg="alpha_target_tracker" type="tracker_node.py" respawn="true">
       <remap from="image_raw" to="/drone/camera/image_raw" />
       <param name="is_headless" type="bool" value="true" />
     </node>
@@ -92,7 +92,7 @@
   <group ns="follower">
     <group ns="x_controller">
       <node name="x_pid" pkg="pid" type="controller">
-        <param name="Kp" value="8.0" />
+        <param name="Kp" value="5.0" />
         <param name="Ki" value="0.8" />
         <param name="Kd" value="10.0" />
         <param name="upper_limit" value="25.0" />
@@ -107,7 +107,7 @@
     </group>
     <group ns="y_controller">
       <node name="y_pid" pkg="pid" type="controller">
-        <param name="Kp" value="8.0" />
+        <param name="Kp" value="5.0" />
         <param name="Ki" value="0.8" />
         <param name="Kd" value="10.0" />
         <param name="upper_limit" value="25.0" />
@@ -122,7 +122,7 @@
     </group>
     <group ns="z_controller">
       <node name="z_pid" pkg="pid" type="controller">
-        <param name="Kp" value="8.0" />
+        <param name="Kp" value="5.0" />
         <param name="Ki" value="0.8" />
         <param name="Kd" value="10.0" />
         <param name="upper_limit" value="25.0" />
