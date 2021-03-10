@@ -1,3 +1,4 @@
 <launch>
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch"/>
+    <node name="webserver" pkg="alpha_webgui" type="webserver.sh" args="--directory '$(find alpha_webgui)/www'" />
 </launch>
